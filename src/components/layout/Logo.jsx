@@ -21,7 +21,7 @@ export function EfieLogo({ className, light, owner }) {
 export function CompanyLogo({ owner, className, size = 'md' }) {
   const sz = { sm: 'h-8 w-8 text-xs', md: 'h-10 w-10 text-sm', lg: 'h-16 w-16 text-xl', xl: 'h-24 w-24 text-3xl' }[size];
   const src = owner?.logo || `${B}capitalo2-badge.png`;
-  return <img src={src} alt={owner?.company || 'Capital O2'} className={cx('shrink-0 rounded-xl bg-white object-contain p-0.5', sz, className)} />;
+  return <img src={src} alt={owner?.company || 'Capital O2'} className={cx('shrink-0 object-contain drop-shadow-sm', sz, className)} />;
 }
 
 /** Wide logo for documents (receipts, agreements, reports). */
