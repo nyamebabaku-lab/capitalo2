@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Capital O2 Estates</string>
+    <string name="title_activity_main">Capital O2 Estates</string>
+    <string name="package_name">com.capitalo2.estates</string>
+    <string name="custom_url_scheme">com.capitalo2.estates</string>
+</resources>

@@ -1,0 +1,72 @@
+name: Build Android apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apks:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      VERSION_CODE: ${{ github.run_number }}
+      HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - name: Signing key present?
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::Signing key secrets not set yet — skipping the Android build (run capitalo2-signing/set-github-secrets.sh)."
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+      - if: env.HAS_KEY == 'true'
+        run: npm ci
+
+      - name: Restore signing key
+        if: env.HAS_KEY == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/upload.p12
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.p12" >> $GITHUB_ENV
+
+      - name: Build the two apps (tenant, manager)
+        if: env.HAS_KEY == 'true'
+        run: |
+          build () {
+            VITE_APP=live VITE_ROLE=$1 OUT_DIR=build/$1 npx vite build
+            APP=$1 npx cap sync android
+            (cd android-$1 && chmod +x gradlew && ./gradlew --no-daemon assembleRelease bundleRelease)
+            cp android-$1/app/build/outputs/apk/release/app-release.apk $2.apk
+            cp android-$1/app/build/outputs/bundle/release/app-release.aab $2.aab
+          }
+          build tenant CapitalO2-Hostel
+          build manager CapitalO2-Estates
+
+      - name: Publish release (download links always point to the newest)
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="android-v1.0.${{ github.run_number }}"
+          gh release create "$TAG" CapitalO2-Hostel.apk CapitalO2-Estates.apk CapitalO2-Hostel.aab CapitalO2-Estates.aab \
+            --title "Capital O2 Android 1.0.${{ github.run_number }}" \
+            --notes "CapitalO2-Hostel.apk — tenants. CapitalO2-Estates.apk — owner/MD, managers and caretakers. Allow 'Install unknown apps' when asked. The .aab files are for the Google Play Store." \
+            --latest
