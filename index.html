@@ -15,6 +15,28 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Safety net: if the app hasn't started after 9 s (old browser, broken saved copy), say so instead of a blank page. -->
+    <script>
+      setTimeout(function () {
+        var root = document.getElementById('root');
+        if (root && !root.children.length) {
+          root.innerHTML = '<div style="font-family:system-ui,sans-serif;max-width:420px;margin:15vh auto;padding:24px;text-align:center">' +
+            '<h1 style="font-size:20px">The app didn\'t start</h1><p style="color:#555;font-size:14px">This can happen with an old saved copy or an outdated browser. Tap below to clear the saved copy and try again. If it still doesn\'t open, update Chrome / Safari.</p>' +
+            '<button id="ew-fix" style="padding:12px 18px;border:0;border-radius:12px;background:#166534;color:#fff;font-weight:600">Clear &amp; reload</button></div>';
+          document.getElementById('ew-fix').onclick = function () {
+            var done = function () { location.replace(location.href.split('#')[0]); };
+            try {
+              Object.keys(localStorage).forEach(function (k) { if (/-(demo|live|pro)$/.test(k)) localStorage.removeItem(k); });
+              var base = new URL('.', location.href).href;
+              var jobs = [];
+              if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.filter(function (r) { return r.scope === base; }).map(function (r) { return r.unregister(); })); }));
+              if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf(base) >= 0; }).map(function (k) { return caches.delete(k); })); }));
+              Promise.all(jobs).then(done, done);
+            } catch (e) { done(); }
+          };
+        }
+      }, 9000);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
