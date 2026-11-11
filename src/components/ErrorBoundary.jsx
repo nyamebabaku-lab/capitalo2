@@ -1,11 +1,15 @@
 // Never a blank page: if the app crashes, show what happened and a way out (reload, or clear saved data).
 import { Component } from 'react';
+import { clearSaved } from '../lib/idbStorage';
+
+/** Only this app's saved data (other apps on the same website keep theirs). */
+const MINE = (k) => k.startsWith('capitalo2-');
 
 /** Removes this app's saved data, offline copy and service worker, then reloads. */
 export async function clearAndReload() {
   try {
     const base = new URL('.', window.location.href).href;
-    Object.keys(localStorage).forEach((k) => { if (/-(demo|live|pro)$/.test(k)) localStorage.removeItem(k); });
+    await clearSaved(MINE);
     if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) if (r.scope === base) await r.unregister();
     if (window.caches) for (const k of await caches.keys()) if (k.includes(base)) await caches.delete(k);
   } catch { /* keep going */ }

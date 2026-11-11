@@ -1,7 +1,8 @@
 // One Zustand store for both apps. The demo keeps everything in the browser; the live app starts empty,
 // loads from Supabase (data/live.js) and replaces the actions that must run on the server.
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { idbStorage } from '../lib/idbStorage';
 import { addMonths, format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { buildSeed } from './seed';
 import { leaseInvoices, allocate, ONLINE, balance, wallet, payoutFee, leaseEnd } from '../lib/billing';
@@ -214,6 +215,7 @@ export const useStore = create(
     }),
     {
       name: LIVE ? 'capitalo2-live' : 'capitalo2-demo',
+      storage: createJSONStorage(() => idbStorage),
       version: 1,
       // The live app never caches account data in the browser; the server is the source of truth.
       partialize: (s) => (LIVE ? {} : Object.fromEntries([...COLS, 'invites', 'platform', 'session', 'lastBilling'].map((k) => [k, s[k]]))),

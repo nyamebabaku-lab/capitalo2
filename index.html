@@ -26,9 +26,10 @@
           document.getElementById('ew-fix').onclick = function () {
             var done = function () { location.replace(location.href.split('#')[0]); };
             try {
-              Object.keys(localStorage).forEach(function (k) { if (/-(demo|live|pro)$/.test(k)) localStorage.removeItem(k); });
+              Object.keys(localStorage).forEach(function (k) { if (k.indexOf('capitalo2-') === 0) localStorage.removeItem(k); });
               var base = new URL('.', location.href).href;
               var jobs = [];
+              if (window.indexedDB) jobs.push(new Promise(function (ok) { var r = indexedDB.open('nyamebabaku-apps', 1); r.onupgradeneeded = function () { r.result.createObjectStore('kv'); }; r.onsuccess = function () { try { var t = r.result.transaction('kv', 'readwrite'), s = t.objectStore('kv'); s.getAllKeys().onsuccess = function (e) { e.target.result.forEach(function (k) { if (String(k).indexOf('capitalo2-') === 0) s.delete(k); }); }; t.oncomplete = ok; t.onerror = ok; } catch (x) { ok(); } }; r.onerror = ok; }));
               if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.filter(function (r) { return r.scope === base; }).map(function (r) { return r.unregister(); })); }));
               if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf(base) >= 0; }).map(function (k) { return caches.delete(k); })); }));
               Promise.all(jobs).then(done, done);
